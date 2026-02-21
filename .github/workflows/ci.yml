@@ -9,25 +9,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # 1️⃣ Checkout repository code
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    # 2️⃣ Create short commit SHA tag
     - name: Set Image Tag
-      id: vars
       run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
+    # 3️⃣ Login to Docker Hub using secrets
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build Image
+    # 4️⃣ Build Docker Image (IMPORTANT: context '.' included)
+    - name: Build Docker Image
       run: |
         docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:$TAG .
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest .
+        docker tag ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:$TAG ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest
 
-    - name: Push Image
+    # 5️⃣ Push both tags to Docker Hub
+    - name: Push Docker Image
       run: |
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:$TAG
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest
