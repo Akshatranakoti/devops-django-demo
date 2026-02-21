@@ -1,33 +1,40 @@
-name: Build and Push Docker Image with Tag
+name: Build and Push Docker Image
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      # 1️⃣ Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set Image Tag
-        run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
-
-      - name: Login to Docker Hub
+      # 3️⃣ Login to DockerHub
+      - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Docker Image
-        run: docker buildx build --load -t ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:$TAG -t ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest .
+      # 4️⃣ Generate dynamic tag (commit SHA)
+      - name: Extract metadata
+        id: meta
+        run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-      - name: Push Docker Image
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:$TAG
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest
+      # 5️⃣ Build and Push Image (official way)
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:${{ env.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest
