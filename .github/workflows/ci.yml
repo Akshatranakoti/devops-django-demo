@@ -25,11 +25,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker Image
-        run: |
-          docker buildx build --load \
-          -t ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:$TAG \
-          -t ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest \
-          .
+        run: docker buildx build --load -t ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:$TAG -t ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest .
 
       - name: Push Docker Image
         run: |
