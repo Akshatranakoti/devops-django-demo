@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: CI-CD Pipeline
 
 on:
   push:
@@ -9,32 +9,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2️⃣ Setup Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 3️⃣ Login to DockerHub
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 4️⃣ Generate dynamic tag (commit SHA)
-      - name: Extract metadata
-        id: meta
-        run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
-
-      # 5️⃣ Build and Push Image (official way)
-      - name: Build and Push
+      - name: Build and Push Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:${{ env.TAG }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/django-devops-demo:latest
+          tags: akshatranakoti032002/django-devops-demo:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Control Node
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.CONTROL_NODE_IP }}
+          username: ubuntu
+          key: ${{ secrets.CONTROL_NODE_KEY }}
+          script: |
+            cd ~
+            ansible-playbook -i inventory.ini deploy.yml

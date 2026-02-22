@@ -4,5 +4,5 @@ import socket
 def health(request):
     return JsonResponse({
         "status": "ok",
-        "hostname": socket.gethostname()
+        "hostname": "akshat_machine"
     })
