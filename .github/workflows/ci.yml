@@ -1,30 +1,57 @@
-deploy:
-  needs: build
-  runs-on: ubuntu-latest
+name: CI-CD Pipeline
 
-  steps:
-    - name: Deploy to Control Node
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.CONTROL_NODE_IP }}
-        username: ubuntu
-        key: ${{ secrets.CONTROL_NODE_KEY }}
-        script: |
+on:
+  push:
+    branches: ["main"]
 
-          # Ensure required tools exist
-          sudo apt-get update -y
-          sudo apt-get install -y git ansible
+jobs:
 
-          # Clone repo first time OR pull latest changes
-          if [ ! -d "$HOME/devops-django-demo" ]; then
-            git clone https://github.com/${{ github.repository }}.git $HOME/devops-django-demo
-          fi
+  build:
+    runs-on: ubuntu-latest
 
-          cd $HOME/devops-django-demo
-          git pull origin main
+    steps:
+      - uses: actions/checkout@v4
 
-          # Install required Ansible collection (needed for docker modules)
-          ansible-galaxy collection install community.docker
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-          # Run deployment
-          ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: akshatranakoti032002/django-devops-demo:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Control Node
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.CONTROL_NODE_IP }}
+          username: ubuntu
+          key: ${{ secrets.CONTROL_NODE_KEY }}
+          script: |
+
+            # Install required tools
+            sudo apt-get update -y
+            sudo apt-get install -y git ansible
+
+            # Clone repo first time or pull latest
+            if [ ! -d "$HOME/devops-django-demo" ]; then
+              git clone https://github.com/${{ github.repository }}.git $HOME/devops-django-demo
+            fi
+
+            cd $HOME/devops-django-demo
+            git pull origin main
+
+            # Install required Ansible collection
+            ansible-galaxy collection install community.docker
+
+            # Run deployment
+            ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
