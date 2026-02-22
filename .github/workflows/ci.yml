@@ -1,40 +1,30 @@
-name: CI-CD Pipeline
+deploy:
+  needs: build
+  runs-on: ubuntu-latest
 
-on:
-  push:
-    branches: ["main"]
+  steps:
+    - name: Deploy to Control Node
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.CONTROL_NODE_IP }}
+        username: ubuntu
+        key: ${{ secrets.CONTROL_NODE_KEY }}
+        script: |
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+          # Ensure required tools exist
+          sudo apt-get update -y
+          sudo apt-get install -y git ansible
 
-    steps:
-      - uses: actions/checkout@v4
+          # Clone repo first time OR pull latest changes
+          if [ ! -d "$HOME/devops-django-demo" ]; then
+            git clone https://github.com/${{ github.repository }}.git $HOME/devops-django-demo
+          fi
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          cd $HOME/devops-django-demo
+          git pull origin main
 
-      - name: Build and Push Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: akshatranakoti032002/django-devops-demo:latest
+          # Install required Ansible collection (needed for docker modules)
+          ansible-galaxy collection install community.docker
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to Control Node
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.CONTROL_NODE_IP }}
-          username: ubuntu
-          key: ${{ secrets.CONTROL_NODE_KEY }}
-          script: |
-            cd ~
-            ansible-playbook -i inventory.ini deploy.yml
+          # Run deployment
+          ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
