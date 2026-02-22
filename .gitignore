@@ -1,5 +1,18 @@
 venv/
+db.sqlite3
+
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Python
 __pycache__/
 *.pyc
-db.sqlite3
+
+# Environment
 .env
+
+# Keys
+*.pem
